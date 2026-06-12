@@ -3,38 +3,14 @@
 import Link from "next/link";
 import { ArrowLeft, Copy, Send } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { ExtractionResult } from "@/lib/extractSchoolComms";
-import { normalizeAppState, readState, writeState } from "./storage";
-import type { AppState, SourceMessage, StoredTask } from "./types";
+import { mergeExtractionIntoState, readState, writeState } from "./storage";
+import type { AppState } from "./types";
 
 type Props = {
   demoMode: boolean;
 };
 
 const forwardingAddress = "family-demo@schoolrun-os.app";
-
-function uid(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function mergeForwarded(state: AppState, extraction: ExtractionResult, message: SourceMessage) {
-  const tasks: StoredTask[] = extraction.tasks.map((task) => ({
-    ...task,
-    id: uid("task"),
-    status: "open",
-  }));
-
-  return normalizeAppState({
-    ...state,
-    summary: extraction.summary,
-    events: [...state.events, ...extraction.events],
-    tasks: [...state.tasks, ...tasks],
-    lunchMenu: [...state.lunchMenu, ...extraction.lunchMenu],
-    childNotes: [...state.childNotes, ...extraction.childNotes],
-    warnings: [...extraction.warnings, ...state.warnings].slice(0, 8),
-    sources: [message, ...state.sources].slice(0, 8),
-  });
-}
 
 export function SetupForwarding({ demoMode }: Props) {
   const [status, setStatus] = useState("");
@@ -46,7 +22,7 @@ export function SetupForwarding({ demoMode }: Props) {
 
   async function runTest() {
     const current = state ?? readState();
-    setStatus("Sending fake Gmail-style payload...");
+    setStatus("Sending a fake forwarded school email...");
     const response = await fetch("/api/inbound-email", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -58,42 +34,45 @@ export function SetupForwarding({ demoMode }: Props) {
       return;
     }
 
-    const next = mergeForwarded(current, payload.extraction, {
-      id: uid("source"),
+    const next = mergeExtractionIntoState(current, payload.extraction, {
       sourceType: "forwarded_email",
       subject: payload.message.subject,
       sender: payload.message.sender,
       rawText: payload.message.rawText,
-      processedAt: new Date().toISOString(),
-      confidence: payload.extraction.overallConfidence,
     });
     setState(writeState(next));
     setStatus("Forwarded email processed. Open the dashboard to see the updated plan.");
   }
 
   return (
-    <main className="shell setup-shell">
+    <main className="app-page">
       <header className="topbar">
-        <Link href="/" className="brand">
-          <span className="brand-mark">SR</span>
-          <span>SchoolRun OS</span>
-        </Link>
-        <nav className="nav">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/setup-forwarding">Forwarding</Link>
-        </nav>
+        <div className="shell topbar-inner">
+          <Link href="/" className="brand" aria-label="SchoolRun OS home">
+            <span className="brand-mark">SR</span>
+            <span>SchoolRun OS</span>
+          </Link>
+          <nav className="topnav" aria-label="Primary">
+            <Link href="/#how-it-works">How it works</Link>
+            <Link href="/dashboard">Sample week</Link>
+            <Link href="/setup-forwarding">Setup</Link>
+          </nav>
+          <Link className="primary-button nav-cta" href="/#setup">
+            Set up SchoolRun OS
+          </Link>
+        </div>
       </header>
 
-      <section className="setup-grid">
-        <div className="intro-panel">
+      <section className="shell setup-grid">
+        <div className="setup-copy">
           <div className="status-row">
             {demoMode ? <span className="demo-pill">Demo mode</span> : null}
             <span className="privacy-copy">For this demo, use fake or redacted school messages.</span>
           </div>
-          <h1>Forward school emails into the same extraction pipeline.</h1>
-          <p>
-            In production this would be your private inbound address. For the MVP, this page sends a
-            fake Gmail-style payload into <code>/api/inbound-email</code>.
+          <p className="core-line">School emails in. Family plan out.</p>
+          <h1>Set up forwarding for SchoolRun OS.</h1>
+          <p className="lede">
+            Forward school messages to your family address, then SchoolRun OS turns them into one calm week view.
           </p>
           <div className="forwarding-address">
             <span>{forwardingAddress}</span>
@@ -109,14 +88,14 @@ export function SetupForwarding({ demoMode }: Props) {
             <button className="primary-button" onClick={runTest}>
               <Send size={18} /> Run test forwarded email
             </button>
-            <Link className="ghost-link" href="/dashboard">
+            <Link className="ghost-button" href="/dashboard">
               <ArrowLeft size={16} /> Back to dashboard
             </Link>
           </div>
           {status ? <p className="status-message">{status}</p> : null}
         </div>
 
-        <div className="panel instructions-panel">
+        <div className="card instructions-panel">
           <p className="section-label">Gmail setup</p>
           <h2>Filter and forwarding steps</h2>
           <ol className="step-list">

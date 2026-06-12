@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, Send } from "lucide-react";
 import { useEffect, useState } from "react";
-import { mergeExtractionIntoState, readState, writeState } from "./storage";
+import { dashboardFlashKey, mergeExtractionIntoState, readState, writeState } from "./storage";
 import type { AppState } from "./types";
-
-type Props = {
-  demoMode: boolean;
-};
 
 const forwardingAddress = "family-demo@schoolrun-os.app";
 
-export function SetupForwarding({ demoMode }: Props) {
+export function SetupForwarding() {
+  const router = useRouter();
   const [status, setStatus] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
   const [state, setState] = useState<AppState | null>(null);
 
   useEffect(() => {
@@ -22,26 +21,31 @@ export function SetupForwarding({ demoMode }: Props) {
 
   async function runTest() {
     const current = state ?? readState();
+    setIsTesting(true);
     setStatus("Sending a fake forwarded school email...");
-    const response = await fetch("/api/inbound-email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(current.profile ? { childProfile: current.profile } : {}),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      setStatus(payload.error || "Forwarding test failed.");
-      return;
-    }
+    try {
+      const response = await fetch("/api/inbound-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(current.profile ? { childProfile: current.profile } : {}),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Forwarding test failed.");
 
-    const next = mergeExtractionIntoState(current, payload.extraction, {
-      sourceType: "forwarded_email",
-      subject: payload.message.subject,
-      sender: payload.message.sender,
-      rawText: payload.message.rawText,
-    });
-    setState(writeState(next));
-    setStatus("Forwarded email processed. Open the dashboard to see the updated plan.");
+      const next = mergeExtractionIntoState(current, payload.extraction, {
+        sourceType: "forwarded_email",
+        subject: payload.message.subject,
+        sender: payload.message.sender,
+        rawText: payload.message.rawText,
+      });
+      setState(writeState(next));
+      window.sessionStorage.setItem(dashboardFlashKey, "Forwarded email test added to the week.");
+      router.push("/dashboard");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Forwarding test failed.");
+    } finally {
+      setIsTesting(false);
+    }
   }
 
   return (
@@ -54,7 +58,7 @@ export function SetupForwarding({ demoMode }: Props) {
           </Link>
           <nav className="topnav" aria-label="Primary">
             <Link href="/#how-it-works">How it works</Link>
-            <Link href="/dashboard">Sample week</Link>
+            <Link href="/dashboard">Dashboard</Link>
             <Link href="/setup-forwarding">Setup</Link>
           </nav>
           <Link className="primary-button nav-cta" href="/#setup">
@@ -65,10 +69,6 @@ export function SetupForwarding({ demoMode }: Props) {
 
       <section className="shell setup-grid">
         <div className="setup-copy">
-          <div className="status-row">
-            {demoMode ? <span className="demo-pill">Demo mode</span> : null}
-            <span className="privacy-copy">For this demo, use fake or redacted school messages.</span>
-          </div>
           <p className="core-line">School emails in. Family plan out.</p>
           <h1>Set up forwarding for SchoolRun OS.</h1>
           <p className="lede">
@@ -85,7 +85,7 @@ export function SetupForwarding({ demoMode }: Props) {
             </button>
           </div>
           <div className="setup-actions">
-            <button className="primary-button" onClick={runTest}>
+            <button className="primary-button" disabled={isTesting} onClick={runTest}>
               <Send size={18} /> Run test forwarded email
             </button>
             <Link className="ghost-button" href="/dashboard">

@@ -5,29 +5,24 @@ import {
   Archive,
   AlertTriangle,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ClipboardList,
   Mail,
   Mic,
-  Play,
   RotateCcw,
-  Send,
-  Upload,
   Utensils,
 } from "lucide-react";
-import { type ChangeEvent, useEffect, useMemo, useState } from "react";
-import { sampleMessages } from "@/lib/demoContent";
-import { isCalendarEvent, type SourceType } from "@/lib/extractSchoolComms";
-import { filterWarnings, initialState, mergeExtractionIntoState, readState, writeState } from "./storage";
+import { useEffect, useMemo, useState } from "react";
+import { isCalendarEvent } from "@/lib/extractSchoolComms";
+import { dashboardFlashKey, ensureSampleDashboardState, filterWarnings, initialState, writeState } from "./storage";
 import type { AppState } from "./types";
 
 type Props = {
-  demoMode: boolean;
   voiceEnabled: boolean;
 };
-
-type ProcessingMode = "pasted_email" | "newsletter" | "lunch_menu";
 
 const sourceLabels: Record<string, string> = {
   pasted_email: "Pasted email",
@@ -124,84 +119,37 @@ function categoryTone(category: string, title = "") {
   return "other";
 }
 
-export function Dashboard({ demoMode, voiceEnabled }: Props) {
+export function Dashboard({ voiceEnabled }: Props) {
   const [state, setState] = useState<AppState>(initialState);
-  const [rawText, setRawText] = useState<string>(sampleMessages.trip.text);
-  const [mode, setMode] = useState<ProcessingMode>("pasted_email");
-  const [selectedSampleKey, setSelectedSampleKey] = useState<keyof typeof sampleMessages>("trip");
   const [status, setStatus] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getStartOfWeekMonday(new Date()));
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   useEffect(() => {
-    setState(readState());
+    const loaded = ensureSampleDashboardState();
+    setState(loaded);
+
+    const firstDatedItem = [
+      ...loaded.events.filter(isCalendarEvent).map((event) => event.date),
+      ...loaded.lunchMenu.map((item) => item.date),
+      ...loaded.tasks.map((task) => task.dueDate),
+    ]
+      .filter((date): date is string => Boolean(date))
+      .sort()[0];
+
+    if (firstDatedItem) {
+      setSelectedWeekStart(getStartOfWeekMonday(new Date(`${firstDatedItem}T12:00:00`)));
+    }
+
+    const flash = window.sessionStorage.getItem(dashboardFlashKey);
+    if (flash) {
+      setStatus(flash);
+      window.sessionStorage.removeItem(dashboardFlashKey);
+    }
   }, []);
 
   function persist(next: AppState) {
     setState(writeState(next));
-  }
-
-  async function processMessage(sourceType: SourceType = mode, text = rawText, subject = "Pasted school message") {
-    if (!text.trim()) {
-      setStatus("Paste a fake or redacted school message first.");
-      return;
-    }
-
-    setIsProcessing(true);
-    setStatus("Reading the school message...");
-    try {
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          rawText: text,
-          sourceType,
-          subject,
-          ...(state.profile ? { childProfile: state.profile } : {}),
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Extraction failed.");
-
-      const next = mergeExtractionIntoState(state, payload.extraction, {
-        sourceType,
-        subject,
-        rawText: text,
-      });
-      persist(next);
-      setStatus(payload.demoMode ? "Processed in demo mode." : "Processed and stored.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not process that message.");
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  async function runForwardedEmail() {
-    setIsProcessing(true);
-    setStatus("Sending a fake forwarded school email...");
-    try {
-      const response = await fetch("/api/inbound-email", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(state.profile ? { childProfile: state.profile } : {}),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Forwarded email failed.");
-
-      const next = mergeExtractionIntoState(state, payload.extraction, {
-        sourceType: "forwarded_email",
-        subject: payload.message.subject,
-        sender: payload.message.sender,
-        rawText: payload.message.rawText,
-      });
-      persist(next);
-      setStatus("Forwarded email test added to the week.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not run the forwarding test.");
-    } finally {
-      setIsProcessing(false);
-    }
   }
 
   function toggleTask(id: string) {
@@ -219,25 +167,6 @@ export function Dashboard({ demoMode, voiceEnabled }: Props) {
       tasks: state.tasks.filter((task) => task.status !== "done"),
     });
     setStatus("Completed to-do items archived.");
-  }
-
-  function selectInputType(key: keyof typeof sampleMessages) {
-    const sample = sampleMessages[key];
-    setSelectedSampleKey(key);
-    setRawText(sample.text);
-    setMode(sample.sourceType as ProcessingMode);
-    setStatus(`${sample.label} loaded.`);
-  }
-
-  async function loadLunchMenuFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    setSelectedSampleKey("lunch");
-    setMode("lunch_menu");
-    setRawText(text.slice(0, 12000));
-    setStatus(`${file.name} loaded as a lunch menu.`);
-    event.target.value = "";
   }
 
   async function playVoiceBriefing() {
@@ -283,7 +212,7 @@ export function Dashboard({ demoMode, voiceEnabled }: Props) {
           </Link>
           <nav className="topnav" aria-label="Primary">
             <Link href="/#how-it-works">How it works</Link>
-            <Link href="/dashboard">Sample week</Link>
+            <Link href="/dashboard">Dashboard</Link>
             <Link href="/setup-forwarding">Setup</Link>
           </nav>
           <Link className="primary-button nav-cta" href="/#setup">
@@ -295,19 +224,15 @@ export function Dashboard({ demoMode, voiceEnabled }: Props) {
       <div className="shell dashboard-shell">
         <section className="dashboard-title-row">
           <div>
-            <div className="status-row">
-              {demoMode ? <span className="demo-pill">Demo mode</span> : null}
-              <span className="privacy-copy">For this demo, use fake or redacted school messages.</span>
-            </div>
             <h1>{childName}&apos;s week</h1>
             <p>
               {weekLabel} · {schoolName}
             </p>
           </div>
           <div className="header-actions">
-            <button className="ghost-button" onClick={runForwardedEmail} disabled={isProcessing}>
-              <Send size={17} /> Run test forwarded email
-            </button>
+            <Link className="primary-button" href="/add-message">
+              <Mail size={17} /> Add school message
+            </Link>
             {voiceEnabled ? (
               <button className="ghost-button" onClick={playVoiceBriefing}>
                 <Mic size={17} /> Voice briefing
@@ -468,72 +393,47 @@ export function Dashboard({ demoMode, voiceEnabled }: Props) {
                   </div>
                 ))
               ) : (
-                <p className="empty-text">Paste or upload a lunch menu to see meals here.</p>
+                <p className="empty-text">Paste a lunch menu from Add school message to see meals here.</p>
               )}
             </div>
           </section>
 
-          <section className="card source-panel">
-            <div className="card-header">
-              <div>
-                <p className="section-label">Add school message</p>
-                <h2>Paste, upload or test</h2>
+          <section className={sourcesOpen ? "card source-summary-card open" : "card source-summary-card"}>
+            <button
+              aria-controls="recent-sources-list"
+              aria-expanded={sourcesOpen}
+              className="source-summary-toggle"
+              onClick={() => setSourcesOpen((current) => !current)}
+              type="button"
+            >
+              <span>
+                <strong>Recent sources</strong>
+              </span>
+              <span className="source-toggle-meta">
+                <span>
+                  {state.sources.length} {state.sources.length === 1 ? "source" : "sources"}
+                </span>
+                {sourcesOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </span>
+            </button>
+            {sourcesOpen ? (
+              <div className="source-list compact-source-list" id="recent-sources-list">
+                {state.sources.length ? (
+                  state.sources.map((source) => (
+                    <details className="source-row" key={source.id}>
+                      <summary>
+                        <span>{source.subject}</span>
+                        <small>{sourceLabels[source.sourceType] ?? source.sourceType}</small>
+                      </summary>
+                      <p>{source.rawText}</p>
+                      <small>Confidence {Math.round(source.confidence * 100)}%</small>
+                    </details>
+                  ))
+                ) : (
+                  <p className="empty-text">Processed messages stay in this browser for the demo.</p>
+                )}
               </div>
-              <Mail size={21} />
-            </div>
-            <div className="mode-tabs" role="group" aria-label="Input type">
-              {Object.entries(sampleMessages).map(([key, sample]) => (
-                <button
-                  aria-pressed={selectedSampleKey === key}
-                  className={selectedSampleKey === key ? "tab active" : "tab"}
-                  key={key}
-                  onClick={() => selectInputType(key as keyof typeof sampleMessages)}
-                  type="button"
-                >
-                  {sample.label}
-                </button>
-              ))}
-            </div>
-            <label className="textarea-label" htmlFor="school-message">
-              School message or lunch menu
-            </label>
-            <textarea
-              id="school-message"
-              value={rawText}
-              onChange={(event) => setRawText(event.target.value.slice(0, 12000))}
-              maxLength={12000}
-              rows={8}
-            />
-            <div className="source-actions">
-              <button className="primary-button" onClick={() => processMessage()} disabled={isProcessing}>
-                <Play size={18} /> Process message
-              </button>
-              <label className="ghost-button file-button">
-                <Upload size={17} /> Upload lunch menu
-                <input accept=".txt,.md,.csv" onChange={loadLunchMenuFile} type="file" />
-              </label>
-              <button className="ghost-button" onClick={runForwardedEmail} disabled={isProcessing}>
-                <Send size={17} /> Run test forwarded email
-              </button>
-            </div>
-
-            <div className="source-list">
-              <p className="section-label">Recent sources</p>
-              {state.sources.length ? (
-                state.sources.map((source) => (
-                  <details key={source.id}>
-                    <summary>
-                      <span>{source.subject}</span>
-                      <small>{sourceLabels[source.sourceType] ?? source.sourceType}</small>
-                    </summary>
-                    <p>{source.rawText}</p>
-                    <small>Confidence {Math.round(source.confidence * 100)}%</small>
-                  </details>
-                ))
-              ) : (
-                <p className="empty-text">Processed messages stay in this browser for the demo.</p>
-              )}
-            </div>
+            ) : null}
           </section>
         </section>
       </div>

@@ -254,7 +254,7 @@ h3,
 
 .core-line {
   color: var(--amber);
-  margin-top: 28px;
+  margin-top: 0;
   text-transform: none;
 }
 
@@ -265,8 +265,6 @@ h3,
   gap: 10px;
 }
 
-.demo-pill,
-.privacy-copy,
 .priority {
   display: inline-flex;
   align-items: center;
@@ -276,16 +274,6 @@ h3,
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-}
-
-.demo-pill {
-  border-color: #b9d7c8;
-  background: var(--green-tint);
-  color: var(--green-deep);
-}
-
-.privacy-copy {
-  color: var(--ink-soft);
 }
 
 .card {
@@ -304,6 +292,7 @@ h3,
   border-bottom: 1px solid var(--line);
 }
 
+.card-header h1,
 .card-header h2 {
   margin-top: 2px;
   font-size: 21px;
@@ -556,6 +545,23 @@ textarea:focus {
   padding: 34px 0 76px;
 }
 
+.add-message-shell {
+  display: grid;
+  gap: 16px;
+  padding: 34px 0 76px;
+}
+
+.add-message-heading {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.add-message-card {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding-bottom: 16px;
+}
+
 .dashboard-title-row {
   display: flex;
   align-items: flex-end;
@@ -631,7 +637,8 @@ textarea:focus {
 .calendar-card,
 .task-card,
 .lunch-card,
-.source-panel {
+.source-panel,
+.source-summary-card {
   overflow: hidden;
 }
 
@@ -1028,16 +1035,15 @@ details small {
   margin-top: 12px;
 }
 
-.file-button {
-  position: relative;
-  overflow: hidden;
+.privacy-helper {
+  margin: 4px 16px 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 650;
 }
 
-.file-button input {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  opacity: 0;
+.add-message-status {
+  margin: 12px 16px 0;
 }
 
 details {
@@ -1063,6 +1069,74 @@ details p {
   font-size: 13px;
   line-height: 1.45;
   white-space: pre-wrap;
+}
+
+.source-summary-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 16px 18px;
+  text-align: left;
+}
+
+.source-summary-card.open .source-summary-toggle {
+  border-bottom: 1px solid var(--line);
+}
+
+.source-summary-toggle > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.source-summary-toggle strong {
+  font-family: var(--display);
+  font-size: 21px;
+  line-height: 1.15;
+}
+
+.source-toggle-meta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.compact-source-list {
+  gap: 8px;
+  padding: 12px 14px 14px;
+}
+
+.source-row {
+  padding: 8px 10px;
+}
+
+.source-row summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  list-style: none;
+}
+
+.source-row summary::-webkit-details-marker {
+  display: none;
+}
+
+.source-row summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setup-grid {
@@ -1190,7 +1264,6 @@ details p {
   .ghost-button,
   .source-actions .primary-button,
   .source-actions .ghost-button,
-  .source-actions .file-button,
   .card-actions .primary-button,
   .card-actions .ghost-button {
     width: 100%;

@@ -1,9 +1,11 @@
 "use client";
 
 import type { ExtractionResult } from "@/lib/extractSchoolComms";
+import { defaultProfile, sampleMessages } from "@/lib/demoContent";
 import type { AppState, ChildProfile, SourceMessage, StoredTask } from "./types";
 
 const key = "schoolrun-os-state";
+export const dashboardFlashKey = "schoolrun-os-flash";
 
 const priorityRank: Record<StoredTask["priority"], number> = {
   low: 0,
@@ -94,6 +96,31 @@ type SourceInput = Omit<SourceMessage, "id" | "processedAt" | "confidence"> &
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function localNoon(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+}
+
+function getStartOfWeekMonday(date: Date) {
+  const start = localNoon(date);
+  const day = start.getDay();
+  const distanceFromMonday = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + distanceFromMonday);
+  return start;
+}
+
+function addDays(date: Date, days: number) {
+  const next = localNoon(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function isLegacyLunchEvent(event: AppState["events"][number]) {
@@ -332,6 +359,144 @@ export const initialState: AppState = {
   sources: [],
 };
 
+export function createSampleDashboardState(): AppState {
+  const weekStart = getStartOfWeekMonday(new Date());
+  const dates = Array.from({ length: 5 }, (_, index) => formatDateKey(addDays(weekStart, index)));
+  const processedAt = new Date().toISOString();
+
+  return normalizeAppState({
+    profile: defaultProfile,
+    summary: "Sam has a museum trip, PE kit reminder, club deadline and lunch menu items in this sample week.",
+    events: [
+      {
+        title: "Science Museum trip",
+        date: dates[1],
+        startTime: "9:15am",
+        endTime: null,
+        location: "Science Museum",
+        category: "trip",
+        description: "Coach leaves Oakfield Primary at 9:15am and returns before pickup.",
+        confidence: 0.92,
+      },
+      {
+        title: "PE athletics practice",
+        date: dates[2],
+        startTime: null,
+        endTime: null,
+        location: null,
+        category: "PE",
+        description: "Bring trainers, water bottle and sun hat.",
+        confidence: 0.86,
+      },
+      {
+        title: "After-school club sign up closes",
+        date: dates[3],
+        startTime: null,
+        endTime: null,
+        location: null,
+        category: "club",
+        description: "After-school club sign up closes by Thursday.",
+        confidence: 0.82,
+      },
+      {
+        title: "Cake sale",
+        date: dates[4],
+        startTime: null,
+        endTime: null,
+        location: "School hall",
+        category: "other",
+        description: "Please bring nut-free cakes if you can.",
+        confidence: 0.78,
+      },
+    ],
+    tasks: [
+      {
+        id: "sample-task-permission",
+        title: "Pay and return the museum trip permission form",
+        dueDate: dates[0],
+        priority: "high",
+        cost: "£8.50",
+        notes: "Permission form and payment due before the trip.",
+        confidence: 0.92,
+        status: "open",
+      },
+      {
+        id: "sample-task-packed-lunch",
+        title: "Pack a named lunch bag for the trip",
+        dueDate: dates[1],
+        priority: "medium",
+        cost: null,
+        notes: "Children should bring a packed lunch in a named bag.",
+        confidence: 0.86,
+        status: "open",
+      },
+      {
+        id: "sample-task-pe-kit",
+        title: "Bring PE kit and trainers",
+        dueDate: dates[2],
+        priority: "medium",
+        cost: null,
+        notes: "Athletics practice needs trainers, water bottle and sun hat.",
+        confidence: 0.84,
+        status: "open",
+      },
+      {
+        id: "sample-task-club",
+        title: "Sign up for after-school club",
+        dueDate: dates[3],
+        priority: "high",
+        cost: null,
+        notes: "Club sign up closes by Thursday.",
+        confidence: 0.8,
+        status: "open",
+      },
+    ],
+    lunchMenu: [
+      { date: dates[0], meal: "Tomato pasta bake", allergens: "wheat, milk", notes: null },
+      { date: dates[1], meal: "Jacket potato with beans", allergens: "none listed", notes: null },
+      { date: dates[2], meal: "Chicken curry with rice", allergens: "mustard", notes: null },
+      { date: dates[3], meal: "Fish fingers and peas", allergens: "fish, wheat", notes: null },
+      { date: dates[4], meal: "Vegetarian pizza", allergens: "wheat, milk", notes: null },
+    ],
+    childNotes: [
+      {
+        childName: defaultProfile.childName,
+        note: "Sam's class needs PE kit for athletics practice.",
+      },
+    ],
+    warnings: [],
+    sources: [
+      {
+        id: "sample-source-trip",
+        sourceType: "pasted_email",
+        subject: sampleMessages.trip.label,
+        sender: "office@oakfield-primary.example",
+        rawText: sampleMessages.trip.text,
+        processedAt,
+        confidence: 0.92,
+      },
+      {
+        id: "sample-source-newsletter",
+        sourceType: "newsletter",
+        subject: sampleMessages.newsletter.label,
+        sender: "newsletter@oakfield-primary.example",
+        rawText: sampleMessages.newsletter.text,
+        processedAt,
+        confidence: 0.82,
+      },
+      {
+        id: "sample-source-lunch",
+        sourceType: "lunch_menu",
+        subject: sampleMessages.lunch.label,
+        sender: "catering@oakfield-primary.example",
+        rawText: sampleMessages.lunch.text,
+        processedAt,
+        confidence: 0.88,
+      },
+    ],
+  });
+}
+
 export function readState(): AppState {
   if (typeof window === "undefined") return initialState;
   try {
@@ -357,4 +522,16 @@ export function writeState(state: AppState) {
 export function saveProfile(profile: ChildProfile) {
   const next = { ...readState(), profile };
   return writeState(next);
+}
+
+export function ensureSampleDashboardState() {
+  const state = readState();
+  const hasDashboardData =
+    Boolean(state.profile) ||
+    state.events.length > 0 ||
+    state.tasks.length > 0 ||
+    state.lunchMenu.length > 0 ||
+    state.sources.length > 0;
+
+  return hasDashboardData ? state : writeState(createSampleDashboardState());
 }

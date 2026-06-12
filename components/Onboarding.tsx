@@ -5,15 +5,11 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, Check, Copy, Mail, Send, ShieldCheck } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { defaultProfile } from "@/lib/demoContent";
-import { mergeExtractionIntoState, readState, saveProfile, writeState } from "./storage";
-
-type Props = {
-  demoMode: boolean;
-};
+import { dashboardFlashKey, mergeExtractionIntoState, readState, saveProfile, writeState } from "./storage";
 
 const forwardingAddress = "family-demo@schoolrun-os.app";
 
-export function Onboarding({ demoMode }: Props) {
+export function Onboarding() {
   const router = useRouter();
   const [form, setForm] = useState(defaultProfile);
   const [hasProfile, setHasProfile] = useState(false);
@@ -79,7 +75,8 @@ export function Onboarding({ demoMode }: Props) {
         rawText: payload.message.rawText,
       });
       writeState(next);
-      setStatus("Test received. Your sample week is ready.");
+      window.sessionStorage.setItem(dashboardFlashKey, "Forwarded email test added to the week.");
+      router.push("/dashboard");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Forwarding test failed.");
     } finally {
@@ -97,7 +94,7 @@ export function Onboarding({ demoMode }: Props) {
           </Link>
           <nav className="topnav" aria-label="Primary">
             <Link href="#how-it-works">How it works</Link>
-            <Link href="/dashboard">Sample week</Link>
+            <Link href="/dashboard">Dashboard</Link>
             <Link href="/setup-forwarding">Setup</Link>
           </nav>
           <Link className="primary-button nav-cta" href="#setup">
@@ -108,10 +105,6 @@ export function Onboarding({ demoMode }: Props) {
 
       <section className="shell hero-grid">
         <div className="hero-copy">
-          <div className="status-row">
-            {demoMode ? <span className="demo-pill">Demo mode</span> : null}
-            <span className="privacy-copy">For this demo, use fake or redacted school messages.</span>
-          </div>
           <p className="core-line">School emails in. Family plan out.</p>
           <h1>The school stuff, out of your head.</h1>
           <p className="lede">

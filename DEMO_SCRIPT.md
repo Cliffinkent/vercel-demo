@@ -13,16 +13,16 @@
    - Child: Sam
    - Age: 8
    - School: Oakfield Primary
-4. Land on the dashboard and point out the demo privacy copy.
-5. Load the trip email sample.
-6. Click `Process message`.
-7. Show the extracted calendar event, payment task, cost, deadline and packed-lunch note.
-8. Load the newsletter or lunch menu sample and process it.
-9. Show the weekly calendar, action list and lunch menu panels updating.
-10. Open `/setup-forwarding`.
-11. Explain the Gmail filter steps and the demo forwarding address.
-12. Click `Run test forwarded email`.
-13. Return to the dashboard and show the forwarded email results in the same calendar and task list.
+4. Click `Dashboard` in the header and show the ready sample week.
+5. Point out the weekly calendar, parent actions, lunch menu and collapsed recent sources.
+6. Click `Add school message` to open `/add-message`.
+7. Load the trip email sample and click `Process message`.
+8. Show the extracted calendar event, payment task, cost, deadline and packed-lunch note back on the dashboard.
+9. Return to `/add-message`, load the newsletter or lunch menu sample and process it.
+10. Show the weekly calendar, action list and lunch menu panels updating.
+11. Open `/setup-forwarding`.
+12. Explain the Gmail filter steps and the demo forwarding address.
+13. Click `Run test forwarded email` and show the forwarded email results back on the dashboard.
 
 ## Closing
 

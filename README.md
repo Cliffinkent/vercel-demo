@@ -8,7 +8,8 @@ SchoolRun OS is a hackathon MVP that turns messy school emails, newsletters and 
 
 - Next.js App Router and TypeScript
 - Local demo onboarding for Sam at Oakfield Primary
-- Paste school messages, newsletters or lunch menus
+- `/dashboard` opens a ready sample week with calendar, parent actions, lunch menu and collapsed recent sources
+- `/add-message` handles pasted school messages, newsletters, lunch menus and the forwarded-email test flow
 - `/api/extract` validates input with Zod and extracts structured JSON
 - `/api/inbound-email` posts a fake Gmail-style forwarded email through the same extraction pipeline
 - Demo parser fallback when AI credentials are missing
@@ -25,7 +26,17 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The app runs without Supabase, AI, or ElevenLabs keys. In that mode it shows a small `Demo mode` notice and stores demo state in the browser.
+The app runs without Supabase, AI, or ElevenLabs keys. In that mode `/dashboard` seeds a fake Oakfield Primary sample week and stores demo state in the browser.
+
+## Demo Flow
+
+1. Open `/dashboard` or click `Dashboard` in the header to see the sample week.
+2. Click `Add school message` to open `/add-message`.
+3. Paste a fake or redacted school message, newsletter or lunch menu, or choose one of the sample tabs.
+4. Click `Process message` to extract calendar items, parent actions and lunch menu entries, then return to the dashboard.
+5. Use `Run test forwarded email` from `/add-message` or `/setup-forwarding` to send a fake Gmail-style payload through the same extraction path.
+
+Lunch menus are processed through the normal paste/process flow. There is no lunch-menu upload UI in the demo.
 
 ## Environment
 

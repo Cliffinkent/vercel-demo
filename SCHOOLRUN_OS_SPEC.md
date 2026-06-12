@@ -37,9 +37,9 @@ Optional:
    - School website URL
 3. User reaches the dashboard.
 4. User can process school information through:
-   - pasted school email or newsletter text
-   - pasted or uploaded lunch menu text
-   - "Run test forwarded email"
+   - pasted school email or newsletter text on `/add-message`
+   - pasted lunch menu text on `/add-message`
+   - "Run test forwarded email" on `/add-message` or `/setup-forwarding`
 5. The app extracts:
    - calendar events
    - parent tasks
@@ -51,7 +51,7 @@ Optional:
    - this week's calendar
    - parent to-do list
    - lunch menu panel
-   - processed source messages
+   - collapsed recent source messages
 7. The forwarding setup screen explains how Gmail forwarding would work.
 8. The test forwarding button sends a fake Gmail-style payload into the same extraction pipeline as pasted text.
 
@@ -59,6 +59,7 @@ Optional:
 
 - `/` onboarding and landing
 - `/dashboard` main app
+- `/add-message` paste/process and test-message flow
 - `/setup-forwarding` Gmail forwarding instructions and test button
 - `/api/extract` AI extraction endpoint
 - `/api/inbound-email` fake forwarded email endpoint
@@ -213,7 +214,14 @@ Dashboard sections:
 - weekly calendar with next 7 days
 - parent action list
 - lunch menu
-- source input panel
+- recent sources collapsed by default
+
+Add-message page:
+- sample tabs for trip email, PE reminder, newsletter and lunch menu
+- textarea for pasted school message or lunch menu text
+- "Process message" button
+- "Run test forwarded email" button
+- return to dashboard after successful processing
 
 Calendar:
 - show one card per day
@@ -285,7 +293,7 @@ Include:
 
 If Supabase vars are missing:
 - run in local demo mode using in-memory state
-- show a small "Demo mode" notice
+- seed the dashboard with fake Oakfield Primary sample data
 - do not crash
 
 If ElevenLabs vars are missing:
@@ -320,7 +328,8 @@ Opening:
 
 Show:
 - child setup
-- paste messy school message
+- dashboard sample week
+- add-message paste flow
 - extracted calendar event
 - extracted parent task
 - forwarding setup page
@@ -338,7 +347,7 @@ Closing:
 - User can create a child profile
 - User can paste a fake school message
 - Extraction produces structured events and tasks
-- Dashboard displays weekly calendar and action list
+- Dashboard displays weekly calendar, action list, lunch menu and collapsed recent sources
 - Test forwarded email uses the same processing path
 - App does not crash without Supabase or ElevenLabs keys
 - README explains setup and deployment
